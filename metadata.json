@@ -1,0 +1,6 @@
+{
+  "name": "Careermize — EdTech LMS, Skill Bundles & Affiliate Platform",
+  "description": "Complete Careermize-style skill learning ecosystem featuring 6 tiered mastery packages, hierarchical video LMS with quizzes and certificates, multi-tier referral commission engine, India-focused GST checkout (Razorpay/PhonePe/Cashfree), instructor studio, and admin control panel.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

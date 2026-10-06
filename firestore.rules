@@ -1,0 +1,112 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Default-Deny Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedEmail() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isAdmin() {
+      return isVerifiedEmail() && (
+        request.auth.token.email == "kumarbarupalsandeep@gmail.com" ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'userId', 'name', 'role', 'referralCode', 'activePackageId', 'createdAt']) &&
+        data.keys().hasOnly(['uid', 'userId', 'name', 'role', 'referralCode', 'activePackageId', 'createdAt', 'updatedAt']) &&
+        data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128 && data.uid.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.userId is string && data.userId.size() >= 2 && data.userId.size() <= 32 && data.userId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 120 &&
+        data.role is string && data.role.size() <= 32 &&
+        data.referralCode is string && data.referralCode.size() >= 2 && data.referralCode.size() <= 32 && data.referralCode.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.activePackageId is string && data.activePackageId.size() >= 2 && data.activePackageId.size() <= 64 &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidCertificate(data) {
+      return data.keys().hasAll(['certId', 'ownerUid', 'studentName', 'courseTitle', 'packageName', 'quizScorePct', 'status', 'createdAt']) &&
+        data.keys().hasOnly(['certId', 'ownerUid', 'studentName', 'courseTitle', 'packageName', 'quizScorePct', 'status', 'createdAt', 'updatedAt']) &&
+        data.certId is string && data.certId.size() >= 4 && data.certId.size() <= 64 && data.certId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.ownerUid is string && data.ownerUid.size() >= 1 && data.ownerUid.size() <= 128 && data.ownerUid.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.studentName is string && data.studentName.size() >= 1 && data.studentName.size() <= 120 &&
+        data.courseTitle is string && data.courseTitle.size() >= 1 && data.courseTitle.size() <= 200 &&
+        data.packageName is string && data.packageName.size() >= 1 && data.packageName.size() <= 120 &&
+        data.quizScorePct is number && data.quizScorePct >= 60 && data.quizScorePct <= 100 &&
+        data.status in ['Valid', 'Revoked'] &&
+        data.createdAt is timestamp;
+    }
+
+    match /admins/{adminId} {
+      allow get: if isSignedIn() && isValidId(adminId) && (request.auth.uid == adminId || isAdmin());
+      allow list, create, update, delete: if false;
+    }
+
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && (request.auth.uid == userId || isAdmin());
+      allow list: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow create: if isVerifiedEmail() &&
+        isValidId(userId) &&
+        userId == request.auth.uid &&
+        isValidUser(incoming()) &&
+        incoming().uid == request.auth.uid &&
+        incoming().role in ['Student', 'Affiliate'] &&
+        incoming().createdAt == request.time;
+      allow update: if isVerifiedEmail() &&
+        isValidId(userId) &&
+        isValidUser(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          isAdmin() ||
+          (request.auth.uid == userId &&
+           incoming().role == existing().role &&
+           incoming().diff(existing()).affectedKeys().hasOnly(['name', 'activePackageId', 'updatedAt']))
+        );
+      allow delete: if isAdmin() && isValidId(userId);
+    }
+
+    match /certificates/{certId} {
+      // Public single-document verification by Certificate ID
+      allow get: if isValidId(certId);
+      allow list: if isSignedIn() && (resource.data.ownerUid == request.auth.uid || isAdmin());
+      allow create: if isVerifiedEmail() &&
+        isValidId(certId) &&
+        isValidCertificate(incoming()) &&
+        incoming().certId == certId &&
+        (incoming().ownerUid == request.auth.uid || isAdmin()) &&
+        incoming().status == 'Valid' &&
+        incoming().createdAt == request.time;
+      allow update: if isAdmin() &&
+        isValidId(certId) &&
+        isValidCertificate(incoming()) &&
+        incoming().certId == existing().certId &&
+        incoming().ownerUid == existing().ownerUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']);
+      allow delete: if false;
+    }
+  }
+}

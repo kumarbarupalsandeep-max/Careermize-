@@ -1,0 +1,128 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Careermize registered student, affiliate, instructor, or manager profile.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Auth UID",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Careermize User ID (e.g., CM948201)",
+          "maxLength": 32,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Full Name",
+          "maxLength": 120
+        },
+        "role": {
+          "type": "string",
+          "description": "RBAC Role",
+          "enum": [
+            "Student",
+            "Affiliate",
+            "Instructor",
+            "Support Staff",
+            "Course Manager",
+            "Finance Admin",
+            "Admin",
+            "Super Admin",
+            "Manager"
+          ],
+          "maxLength": 32
+        },
+        "referralCode": {
+          "type": "string",
+          "description": "Unique referral code",
+          "maxLength": 32,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "activePackageId": {
+          "type": "string",
+          "description": "Active Careermize Package ID",
+          "maxLength": 64
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Account creation timestamp"
+        }
+      },
+      "required": ["uid", "userId", "name", "role", "referralCode", "activePackageId", "createdAt"]
+    },
+    "Certificate": {
+      "title": "Certificate",
+      "description": "Publicly verifiable Careermize course completion certificate.",
+      "type": "object",
+      "properties": {
+        "certId": {
+          "type": "string",
+          "description": "Unique Certificate ID (e.g., CERT-2026-884920)",
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerUid": {
+          "type": "string",
+          "description": "Student Firebase UID",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "studentName": {
+          "type": "string",
+          "description": "Student Full Name",
+          "maxLength": 120
+        },
+        "courseTitle": {
+          "type": "string",
+          "description": "Completed Course Title",
+          "maxLength": 200
+        },
+        "packageName": {
+          "type": "string",
+          "description": "Package Bundle Name",
+          "maxLength": 120
+        },
+        "quizScorePct": {
+          "type": "number",
+          "description": "Assessment Score Percentage"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Valid", "Revoked"],
+          "maxLength": 20
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "certId",
+        "ownerUid",
+        "studentName",
+        "courseTitle",
+        "packageName",
+        "quizScorePct",
+        "status",
+        "createdAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User public & RBAC profile document."
+    },
+    "/certificates/{certId}": {
+      "schema": { "$ref": "#/entities/Certificate" },
+      "description": "Publicly verifiable Careermize certificate document."
+    }
+  }
+}
